@@ -1,12 +1,21 @@
+from tkinter.messagebox import NO
+
+
+root = None;
+
 class BSTNode:
-    def __init__(self, val=None):
+    def __init__(self, val=None, parent=None):
         self.left = None
         self.right = None
         self.val = val
+        self.sum = val
+        self.size = 1
+        self.parent = parent
 
     def insert(self, val):
         if not self.val:
             self.val = val
+            self.sum = val
             return
 
         if self.val == val:
@@ -16,13 +25,31 @@ class BSTNode:
             if self.left:
                 self.left.insert(val)
                 return
-            self.left = BSTNode(val)
+            self.left = BSTNode(val, self)
+            self.left.UpdateSum()
             return
 
         if self.right:
             self.right.insert(val)
             return
-        self.right = BSTNode(val)
+        self.right = BSTNode(val, self)
+
+        self.right.UpdateSum()
+
+    def nodeSum(self):
+
+        leftSum = 0
+        rightSum = 0
+        if self.left is not None:
+            leftSum = self.left.sum
+        if self.right is not None:
+            rightSum = self.right.sum
+        return leftSum + rightSum + self.val
+
+    def UpdateSum(self):
+        self.sum = self.nodeSum()
+        if self.parent is not None:
+            self.parent.UpdateSum()
 
     def get_min(self):
         current = self
@@ -114,18 +141,97 @@ class BSTNode:
         return self.successorH(value, self, None)
 
 
+    def rangeQ(self, min, max, out):
 
+        # Recurse down left tree
+        if self.left is not None:
+            # If the left node is greater than the min keep going left
+            if (self.left is not None and self.left.val >= min):
+                self.left.rangeQ(min, max, out)
+            # If the left node is below the range but has a right child, some of
+            # the children may be in range.
+            elif(self.left.right is not None):
+                self.left.right.rangeQ(min, max, out) # Skips to the child
+            else:
+                pass
+        # Add current node to output        
+        if self.val is not None and min <= self.val <= max:
+            out.append(self.val)
+        
+        # Recurse right tree
+        if self.right is not None:
+            # if the right node's value is less than the max keep going right
+            if (self.right is not None and self.right.val <= max):
+                self.right.rangeQ(min, max, out)
+            # If the right node has a left node, left nodes may be in range so they need to be searched
+            elif(self.right.left is not None):
+                self.right.left.rangeQ(min, max, out) # Skips to the child
+            else:
+                pass
+        return out
+
+    def rangeSum(self, min, max):
+        sum = 0
+        node = self.lca(min, max)
+        if node is None:
+            return None
+        sum = node.val
+        leftNode = node.left
+        while leftNode:
+            if leftNode.val >= min:
+                if leftNode.right:
+                    sum += leftNode.right.sum
+                sum += leftNode.val
+                leftNode = leftNode.left
+
+            else:
+                leftNode = leftNode.right
+
+        rightNode = node.right
+        while rightNode:
+            if rightNode.val <= max:
+                if rightNode.left:
+                    sum += rightNode.left.sum
+                sum += rightNode.val
+                rightNode = rightNode.right
+
+            else:
+                rightNode = rightNode.left
+        
+        return sum
+             
+
+    def lca(self, min, max):
+     
+        # Base Case
+        if self is None:
+            return None
     
+        # If both min and max are smaller than self, then LCA
+        # lies in left
+        if(self.val > min and self.val > max and self.left is not None):
+            return self.left.lca(min, max)
+    
+        # If both min and max are greater than self, then LCA
+        # lies in right
+        if(self.val < min and self.val < max and self.right is not None):
+            return self.right.lca(min, max)
+    
+        return self
         
 
     
 
 def main():
     # nums = [12, 6, 18, 19, 21, 11, 3, 5, 4, 24, 18]
-    nums = [25, 16, 48, 8, 20, 18, 23, 59]
+    nums = [25, 16, 48, 46, 47, 8, 9, 5, 20, 18, 23, 59]
     bst = BSTNode()
     for num in nums:
         bst.insert(num)
+
+    print(bst.lca(1, 14).val)
+
+    print(bst.rangeSum(6,24))
     print("preorder:")
     print(bst.preorder([]))
     print("#")
@@ -141,6 +247,12 @@ def main():
     print(f'Successor of 19 is {bst.successor(19)}')
     print(f'Successor of 48 is {bst.successor(48)}')
     print(f'Successor of 70 is {bst.successor(70)}')
+    print()
+    print()
+
+    array = []
+    bst.rangeQ(1, 19, array)
+    print(f'range from  {array}')
     # nums = [2, 6, 20]
     # print("deleting " + str(nums))
     # for num in nums:
